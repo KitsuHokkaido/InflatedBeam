@@ -10,7 +10,7 @@ from mpi4py import MPI
 from dolfinx import fem, mesh
 
 class InflatedBeam:
-    def __init__(self, L, R, h, nb_elts, degree, E=2e5, v=0.3):
+    def __init__(self, L, R, h, nb_elts, degree, E=2e4, v=0.3):
         self.degree = degree
         self.nb_elts = nb_elts
         

@@ -83,7 +83,7 @@ def run_beam_analysis():
     
     # Définir un moment de flexion
     def moment_function(x):
-        return 1000.0 * x / L  # Moment croissant linéairement
+        return 5000.0 * x / L  # Moment croissant linéairement
     
     beam.set_external_loads(p=p_val*0.5, f1=None, f3=None, c_gamma=moment_function)
     

@@ -22,7 +22,7 @@ class BeamVisualizer3D:
         
         # Évaluer les solutions en chaque point
         for i, x in enumerate(x_eval):
-            point = np.array([[x]])
+            point = np.array([[x, 0.0, 0.0]])
             try:
                 # Évaluer la solution complète au point x
                 u_val = u_sol.eval(point, np.array([0]))
