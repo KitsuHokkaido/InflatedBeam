@@ -46,39 +46,36 @@ class InflatedBeam:
         
         self.V = fem.functionspace(self.domain, ("Lagrange", self.degree, (5,)))
 
-        self.u_trial = ufl.TrialFunction(self.V)
-        self.v_test = ufl.TestFunction(self.V)
-     
-        self.u1, self.u3, self.gamma, self.alpha, self.lam = ufl.split(self.u_trial)
+        self.v_test = ufl.TestFunction(self.V)   
         self.v1, self.v3, self.v_gamma, self.v_alpha, self.v_lam = ufl.split(self.v_test)
         
         self.u_sol = fem.Function(self.V)
         self.u1_sol, self.u3_sol, self.gamma_sol, self.alpha_sol, self.lam_sol = ufl.split(self.u_sol)
     
     def setup_variational_form(self):
-        u1_1 = self.u1.dx(0)
-        u3_1 = self.u3.dx(0)
-        alpha_1 = self.alpha.dx(0)
+        u1_1 = self.u1_sol.dx(0)
+        u3_1 = self.u3_sol.dx(0)
+        alpha_1 = self.alpha_sol.dx(0)
         alpha_11 = alpha_1.dx(0)
 
         e_p = u1_1 + 0.5 * (u1_1**2 + u3_1**2) 
-        k_p = self.gamma.dx(0)
-        k_22s = self.R*(self.alpha*ufl.sqrt(2 - self.alpha**2) - 1)
+        k_p = self.gamma_sol.dx(0)
+        k_22s = self.R*(self.alpha_sol*ufl.sqrt(2 - self.alpha_sol**2) - 1)
 
-        H = ( 2 * alpha_1**2 + alpha_11*(2*self.alpha + self.alpha**3) ) / (2 - self.alpha**2)**(3/2)
+        H = ( 2 * alpha_1**2 + alpha_11*(2*self.alpha_sol + self.alpha_sol**3) ) / (2 - self.alpha_sol**2)**(3/2)
 
-        overline_es_squared = (self.R**2 * alpha_1**2 * ufl.pi ) / (2 - self.alpha**2)
+        overline_es_squared = (self.R**2 * alpha_1**2 * ufl.pi ) / (2 - self.alpha_sol**2)
 
-        overline_k11s_squared = (self.R**2*ufl.pi/4) * (3*(2 - self.alpha**2)*(alpha_11)**2 - 2*ufl.sqrt(2 - self.alpha**2)*alpha_11*H + 3*self.alpha**2*H**2)
+        overline_k11s_squared = (self.R**2*ufl.pi/4) * (3*(2 - self.alpha_sol**2)*(alpha_11)**2 - 2*ufl.sqrt(2 - self.alpha_sol**2)*alpha_11*H + 3*self.alpha_sol**2*H**2)
 
-        overline_k21s_squared = (self.R**2 * alpha_1**2 * ufl.pi) / (2 - self.alpha**2)
+        overline_k21s_squared = (self.R**2 * alpha_1**2 * ufl.pi) / (2 - self.alpha_sol**2)
 
-        overline_k11s = self.R * ufl.pi * (self.alpha*H - alpha_11*ufl.sqrt(2 - self.alpha**2))
+        overline_k11s = self.R * ufl.pi * (self.alpha_sol*H - alpha_11*ufl.sqrt(2 - self.alpha_sol**2))
 
         U_p = (self.R/2) * (
             2*ufl.pi * self.A * e_p**2 + 
-            (self.A * self.R**2 * (2 - self.alpha**2) * ufl.pi + 
-             self.D1 * self.alpha**2 * ufl.pi) * k_p**2
+            (self.A * self.R**2 * (2 - self.alpha_sol**2) * ufl.pi + 
+             self.D1 * self.alpha_sol**2 * ufl.pi) * k_p**2
         )
         
         U_s = (self.R/2) * (
@@ -89,28 +86,26 @@ class InflatedBeam:
             2*self.D3 * k_22s * overline_k11s
         )
         
-        U_ps = self.R * self.A * ufl.pi * e_p * self.R**2 * (alpha_1**2) / (2 - self.alpha**2)
+        U_ps = self.R * self.A * ufl.pi * e_p * self.R**2 * (alpha_1**2) / (2 - self.alpha_sol**2)
         
         energy_density = U_p + U_s + U_ps
         self.total_internal_energy = energy_density * ufl.dx
         
         self.setup_lagrange_multiplier()
         
-        self.total_potential = self.total_internal_energy - self.total_external_work + self.constraint_term
+        self.total_potential = self.total_internal_energy - self.total_external_work + self.lagrange_term
         
-
         self.F = ufl.derivative(self.total_potential, self.u_sol, self.v_test)
-        self.J = ufl.derivative(self.F, self.u_sol, self.u_trial)
 
     def setup_lagrange_multiplier(self):
-        u1_1 = self.u1.dx(0)
-        u3_1 = self.u3.dx(0)
+        u1_1 = self.u1_sol.dx(0)
+        u3_1 = self.u3_sol.dx(0)
         j_p = ufl.sqrt((1 + u1_1)**2 + u3_1**2)
 
-        C = - ufl.sin(self.gamma)*(1 + u1_1)/j_p - ufl.cos(self.gamma)*u3_1/j_p
+        C = - ufl.sin(self.gamma_sol)*(1 + u1_1)/j_p - ufl.cos(self.gamma_sol)*u3_1/j_p
     
-        constraint_term_density = self.lam * C
-        self.constraint_term = constraint_term_density * ufl.dx
+        constraint_term_density = self.lam_sol * C
+        self.lagrange_term = constraint_term_density * ufl.dx
 
     def setup_external_work(self):
 
@@ -137,9 +132,9 @@ class InflatedBeam:
             c_gamma = self.c_gamma(x)
 
         
-        pressure_work = p*ufl.pi*self.R**2*(self.alpha*ufl.cos(self.gamma) + ufl.sqrt(2 - self.alpha**2)*(1 - 2*self.alpha))
-        force_work = f1*self.u1 + f3*self.u3
-        moment_work = c_gamma*self.gamma
+        pressure_work = p*ufl.pi*self.R**2*(self.alpha_sol*ufl.cos(self.gamma_sol) + ufl.sqrt(2 - self.alpha_sol**2)*(1 - 2*self.alpha_sol))
+        force_work = f1*self.u1_sol + f3*self.u3_sol
+        moment_work = c_gamma*self.gamma_sol
 
         external_work_density = pressure_work + force_work + moment_work
         self.total_external_work = external_work_density * ufl.dx
@@ -200,24 +195,99 @@ class InflatedBeam:
         self.setup_external_work()
         self.setup_variational_form()
 
-        problem = NonlinearProblem(self.F, self.u_sol, self.bcs, self.J)
+        # Initialisation de la solution avec des valeurs physiques
+        with self.u_sol.x.petsc_vec.localForm() as loc:
+            loc.set(0.0)
         
-        # Solveur Newton
+        # Initialisation physique : cylindre droit
+        alpha_dofs = self.V.sub(3).dofmap.list
+        gamma_dofs = self.V.sub(2).dofmap.list
+        
+        self.u_sol.x.array[alpha_dofs] = 1.0  # Cylindre circulaire
+        self.u_sol.x.array[gamma_dofs] = 0.0  # Pas de rotation
+        
+        # Utiliser la jacobienne automatique
+        problem = NonlinearProblem(self.F, self.u_sol, self.bcs)
+        
+        # Configuration du solveur Newton plus robuste
         solver = NewtonSolver(self.domain.comm, problem)
         solver.convergence_criterion = "incremental"
         solver.rtol = 1e-6
-        solver.max_it = 25
+        solver.atol = 1e-8
+        solver.max_it = 100
         
-        # Résoudre
-        n_iter, converged = solver.solve(self.u_sol)
+        # Configuration correcte des options PETSc
+        ksp = solver.krylov_solver
+        ksp.setType("preonly")
+        pc = ksp.pc
+        pc.setType("lu")
+        pc.setFactorSolverType("mumps")
         
-        if converged:
-            print(f"Convergence atteinte en {n_iter} itérations")
-        else:
-            print("Pas de convergence !")
+        # Stratégie de continuation en charge
+        load_steps = [0.1, 0.3, 0.6, 1.0]
+        original_loads = {}
         
-        return converged
+        # Sauvegarder les charges originales
+        if self.p is not None:
+            original_p = self.p
+        if self.c_gamma is not None:
+            original_c_gamma = self.c_gamma
+            
+        success = True
         
+        for i, factor in enumerate(load_steps):
+            print(f"Étape de charge {i+1}/{len(load_steps)}: {factor*100:.0f}% de la charge")
+            
+            # Appliquer le facteur de charge
+            if self.p is not None:
+                self.p = lambda x: factor * original_p(x)
+            if self.c_gamma is not None:
+                self.c_gamma = lambda x: factor * original_c_gamma(x)
+            
+            # Recalculer le travail externe avec la nouvelle charge
+            self.setup_external_work()
+            self.setup_variational_form()
+            
+            # Nouveau problème avec la charge mise à jour
+            problem = NonlinearProblem(self.F, self.u_sol, self.bcs)
+            solver = NewtonSolver(self.domain.comm, problem)
+            solver.convergence_criterion = "incremental"
+            solver.rtol = 1e-6
+            solver.atol = 1e-8
+            solver.max_it = 50
+            
+            ksp = solver.krylov_solver
+            ksp.setType("preonly")
+            pc = ksp.pc
+            pc.setType("lu")
+            pc.setFactorSolverType("mumps")
+            
+            try:
+                n_iter, converged = solver.solve(self.u_sol)
+                
+                if converged:
+                    print(f"  Convergence atteinte en {n_iter} itérations")
+                else:
+                    print(f"  Pas de convergence à l'étape {i+1}")
+                    success = False
+                    break
+                    
+            except RuntimeError as e:
+                print(f"  Erreur lors de la résolution à l'étape {i+1}: {e}")
+                success = False
+                break
+        
+        # Restaurer les charges originales
+        if self.p is not None:
+            self.p = original_p
+        if self.c_gamma is not None:
+            self.c_gamma = original_c_gamma
+            
+        if success:
+            print("Toutes les étapes de charge ont convergé !")
+        
+        return success
+
     def extract_solution(self):
         return self.u_sol.split()
 

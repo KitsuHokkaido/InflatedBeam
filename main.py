@@ -3,22 +3,31 @@ from beam_visualizer import BeamVisualizer
 
 
 if __name__ == '__main__':
-   beam = InflatedBeam(L=10.0, R=3, h=0.01, nb_elts=50, degree=3) 
-   
-   beam.set_external_loads(
-        p=1000.0,
-        f1=0,
-        f3=0,
-        c_gamma=200.0
+   # Cas doux en cm
+   beam_test = InflatedBeam(
+        L=30.0,      
+        R=3.0,       
+        h=0.2,       # Plus épais (2 mm)
+        nb_elts=20,  # Moins d'éléments pour commencer
+        degree=2,
+        E=200000,    # Module plus faible
+        v=0.3
    )
 
-   if beam.solve():
-       u1, u3, gamma, alpha = beam.extract_solution()
+   beam_test.set_external_loads(
+        p=50.0,      # Pression plus faible
+        f1=0,
+        f3=0,
+        c_gamma=5.0  # Moment plus faible
+   )
 
-   visualizer = BeamVisualizer()
+   if beam_test.solve():
+       u1, u3, gamma, alpha, lam = beam_test.extract_solution()
 
-   domain, tdim = beam.get_data()
+   #visualizer = BeamVisualizer()
 
-   visualizer.show(domain, tdim)
+   #domain, tdim = beam.get_data()
+
+   #visualizer.show(domain, tdim)
 
 
