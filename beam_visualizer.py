@@ -2,7 +2,7 @@ from dolfinx import plot
 import pyvista 
 
 
-class Visualizer:
+class BeamVisualizer:
     def __init__(self):
         self.plotter = pyvista.Plotter() 
     
