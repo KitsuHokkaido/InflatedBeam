@@ -1,20 +1,14 @@
 import numpy as np
 import pyvista as pv
-from dolfinx import fem
 import matplotlib.pyplot as plt
 
 class BeamVisualizer3D:
     def __init__(self, beam):
         self.beam = beam
-        self.domain = beam.domain
-        self.R = beam.R
         
-    def extract_solution_arrays(self, u_sol, n_points=100):
-        """Extrait les solutions et les évalue sur le domaine"""
-        # Créer des points d'évaluation le long de la poutre
+    def extract_solution_arrays(self, n_points=100):
         x_eval = np.linspace(0, self.beam.L, n_points)
         
-        # Préparer les tableaux pour les solutions
         u1_vals = np.zeros_like(x_eval)
         u3_vals = np.zeros_like(x_eval)
         gamma_vals = np.zeros_like(x_eval)
@@ -25,7 +19,7 @@ class BeamVisualizer3D:
             point = np.array([[x, 0.0, 0.0]])
             try:
                 # Évaluer la solution complète au point x
-                u_val = u_sol.eval(point, np.array([0]))
+                u_val = self.beam.u_sol.eval(point, np.array([0]))
                 u1_vals[i] = u_val[0]
                 u3_vals[i] = u_val[1] 
                 gamma_vals[i] = u_val[2]
@@ -71,8 +65,8 @@ class BeamVisualizer3D:
             gamma = gamma_vals[i]
             
             # Demi-axes de l'ellipse : a = R*α, b = R*√(2-α²)
-            a = self.R * alpha
-            b = self.R * np.sqrt(max(0.01, 2 - alpha**2))  # Protection contre les valeurs négatives
+            a = self.beam.R * alpha
+            b = self.beam.R * np.sqrt(max(0.01, 2 - alpha**2))  # Protection contre les valeurs négatives
             
             # Base locale tournée par γ
             # e2^γ = cos(γ) * e2^0 + sin(γ) * e3^0
@@ -116,8 +110,8 @@ class BeamVisualizer3D:
             for j, th in enumerate(theta):
                 # Cylindre circulaire non déformé
                 x_final = x1
-                y_final = self.R * np.cos(th)
-                z_final = self.R * np.sin(th)
+                y_final = self.beam.R * np.cos(th)
+                z_final = self.beam.R * np.sin(th)
                 
                 points.append([x_final, y_final, z_final])
                 
@@ -149,11 +143,11 @@ class BeamVisualizer3D:
         mesh = pv.PolyData(points, faces)
         return mesh
     
-    def visualize_beam(self, u_sol, show_both=True, window_size=(1200, 600)):
+    def visualize_beam(self, show_both=True, window_size=(1200, 600)):
         """Visualise la poutre avec PyVista"""
         
         # Extraire les solutions
-        x_vals, u1_vals, u3_vals, gamma_vals, alpha_vals = self.extract_solution_arrays(u_sol, n_points=50)
+        x_vals, u1_vals, u3_vals, gamma_vals, alpha_vals = self.extract_solution_arrays(n_points=50)
         
         # Afficher quelques valeurs pour diagnostic
         print(f"Valeurs de déformation détectées:")
@@ -199,10 +193,10 @@ class BeamVisualizer3D:
         
         return mesh_init, mesh_def
     
-    def plot_cross_sections_matplotlib(self, u_sol, positions=[0.25, 0.5, 0.75]):
+    def plot_cross_sections_matplotlib(self, positions=[0.25, 0.5, 0.75]):
         """Trace les sections transversales avec matplotlib pour vérification"""
         
-        x_vals, u1_vals, u3_vals, gamma_vals, alpha_vals = self.extract_solution_arrays(u_sol)
+        x_vals, u1_vals, u3_vals, gamma_vals, alpha_vals = self.extract_solution_arrays(n_points=50)
         
         fig, axes = plt.subplots(1, len(positions), figsize=(4*len(positions), 4))
         if len(positions) == 1:
@@ -222,8 +216,8 @@ class BeamVisualizer3D:
             print(f"Position {pos_ratio}: alpha={alpha:.4f}, gamma={gamma:.4f}")
             
             # Demi-axes
-            a = self.R * alpha
-            b = self.R * np.sqrt(max(0.01, 2 - alpha**2))
+            a = self.beam.R * alpha
+            b = self.beam.R * np.sqrt(max(0.01, 2 - alpha**2))
             
             # Ellipse dans le repère local
             y_local = a * np.cos(theta)
@@ -239,8 +233,8 @@ class BeamVisualizer3D:
             axes[i].plot(y_rotated, z_rotated, 'r-', linewidth=2, label='Déformée')
             
             # Cercle initial pour comparaison
-            y_circle = self.R * np.cos(theta)
-            z_circle = self.R * np.sin(theta)
+            y_circle = self.beam.R * np.cos(theta)
+            z_circle = self.beam.R * np.sin(theta)
             axes[i].plot(y_circle, z_circle, 'b--', linewidth=1, alpha=0.7, label='Initiale')
             
             axes[i].set_aspect('equal')
@@ -254,13 +248,13 @@ class BeamVisualizer3D:
         plt.show()
         return fig
     
-    def debug_solution(self, u_sol):
+    def debug_solution(self):
         """Fonction de debug pour vérifier les valeurs de la solution"""
-        x_vals, u1_vals, u3_vals, gamma_vals, alpha_vals = self.extract_solution_arrays(u_sol)
+        x_vals, u1_vals, u3_vals, gamma_vals, alpha_vals = self.extract_solution_arrays(n_points=50)
         
         print("=== DEBUG SOLUTION ===")
         print(f"Longueur poutre: {self.beam.L}")
-        print(f"Rayon initial: {self.R}")
+        print(f"Rayon initial: {self.beam.R}")
         print(f"Nombre de points d'évaluation: {len(x_vals)}")
         print(f"Range x: [{x_vals[0]:.2f}, {x_vals[-1]:.2f}]")
         

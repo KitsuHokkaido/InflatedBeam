@@ -51,18 +51,18 @@ def run_beam_analysis():
             
             # Visualisation 3D interactive
             print("Lancement de la visualisation 3D...")
-            mesh_init, mesh_def = visualizer.visualize_beam(beam.u_sol, show_both=True)
+            mesh_init, mesh_def = visualizer.visualize_beam(show_both=True)
             
             # Sections transversales
             print("Génération des sections transversales...")
-            fig = visualizer.plot_cross_sections_matplotlib(beam.u_sol, positions=[0.2, 0.5, 0.8])
+            fig = visualizer.plot_cross_sections_matplotlib(positions=[0.2, 0.5, 0.8])
             
         else:
             print("⚠ Aucune déformation significative détectée")
             print("Vérifiez les paramètres de charge et les conditions aux limites")
             
             # Visualiser quand même pour diagnostic
-            mesh_init, mesh_def = visualizer.visualize_beam(beam.u_sol, show_both=True)
+            mesh_init, mesh_def = visualizer.visualize_beam(show_both=True)
     
     else:
         print("✗ Échec de la résolution")
@@ -85,7 +85,7 @@ def run_beam_analysis():
     def moment_function(x):
         return 5000.0 * x / L  # Moment croissant linéairement
     
-    beam.set_external_loads(p=p_val*0.5, f1=None, f3=None, c_gamma=moment_function)
+    beam.set_external_loads(p=p_val, f1=None, f3=None, c_gamma=moment_function)
     
     success2 = beam.solve()
     
@@ -97,7 +97,12 @@ def run_beam_analysis():
         visualizer2.debug_solution(beam.u_sol)
         
         print("Lancement de la visualisation 3D avec moment...")
-        mesh_init2, mesh_def2 = visualizer2.visualize_beam(beam.u_sol, show_both=True)
+        mesh_init2, mesh_def2 = visualizer2.visualize_beam(show_both=True)
+
+        # Sections transversales
+        print("Génération des sections transversales...")
+        fig = visualizer.plot_cross_sections_matplotlib(positions=[0.2, 0.5, 0.8])
+
         
     else:
         print("✗ Échec de la résolution avec moment")
@@ -128,7 +133,7 @@ def diagnostic_beam_setup():
         if success:
             print("✓ Résolution sans charge OK")
             visualizer = BeamVisualizer3D(beam)
-            visualizer.debug_solution(beam.u_sol)
+            visualizer.debug_solution()
         else:
             print("✗ Échec résolution sans charge")
     except Exception as e:
@@ -162,7 +167,8 @@ def diagnostic_beam_setup():
     except Exception as e:
         print(f"✗ Erreur avec pression: {e}")
 
-if __name__ == "__main__":
+
+def run_test():
     print("Choisissez une option:")
     print("1. Analyse complète")
     print("2. Diagnostic simple")
@@ -178,3 +184,34 @@ if __name__ == "__main__":
         diagnostic_beam_setup()
     
     print("\nAnalyse terminée.")
+
+def beam_analysis():
+    beam = InflatedBeam(
+        L=100.0,
+        R=5,
+        h=0.01,  
+        nb_elts=20,
+        degree=2
+    )
+
+    beam.set_external_loads(
+        p=150,
+        f1=0,
+        f3=0,
+        c_gamma=lambda x:5000*x/100
+    )
+
+    #beam.print_data()
+
+    if(beam.solve()):
+        viz = BeamVisualizer3D(beam)
+        viz.visualize_beam()
+        viz.plot_cross_sections_matplotlib()
+        viz.debug_solution()
+
+    else:
+        print("Echec de la résolution")
+    
+if __name__ == "__main__":
+    print("======== ANALYSE DE POUTRE GONFLABLE ========")
+    beam_analysis() 

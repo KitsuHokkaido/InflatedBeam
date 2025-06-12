@@ -3,18 +3,17 @@ import ufl
 
 from dolfinx.fem.petsc import NonlinearProblem
 from dolfinx.nls.petsc import NewtonSolver
-from ufl.finiteelement import FiniteElement, MixedElement
 
 from petsc4py import PETSc
 from mpi4py import MPI
 from dolfinx import fem, mesh
 
 class InflatedBeam:
-    def __init__(self, L, R, h, nb_elts, degree, E=2e4, v=0.3):
+    def __init__(self, L, R, h, nb_elts, degree, E=2e5, v=0.3):
         self.degree = degree
         self.nb_elts = nb_elts
         
-        # Grandeurs du système (en cm)
+        # Grandeurs du systeme (en cm)
         self.L = L
         self.R = R
         self.h = h
@@ -41,9 +40,6 @@ class InflatedBeam:
         self.setup_function_space()
     
     def setup_function_space(self):
-        #P = FiniteElement("Lagrange", self.domain.ufl_cell(), self.degree)
-        #self.mixed_element = MixedElement([P, P, P, P])
-        
         self.V = fem.functionspace(self.domain, ("Lagrange", self.degree, (5,)))
 
         self.v_test = ufl.TestFunction(self.V)   
@@ -291,7 +287,6 @@ class InflatedBeam:
     def extract_solution(self):
         return self.u_sol.split()
 
-    def get_data(self):
-        return (self.domain, self.tdim)
-
+    def print_data(self):
+        print()
 
