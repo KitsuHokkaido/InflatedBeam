@@ -169,7 +169,6 @@ class InflatedBeam:
         def boundary_left(x):
             return np.isclose(x[0], 0.0)
 
-        # Utiliser locate_dofs_topological si geometrical pose problème
         boundary_facets = mesh.locate_entities_boundary(
             self.domain, self.tdim-1, boundary_left)
         
@@ -186,42 +185,40 @@ class InflatedBeam:
         
         self.bcs = [bc_u1, bc_u3, bc_gamma, bc_alpha]
 
-    def solve(self):
-        self.apply_boundary_conditions()
-        self.setup_external_work()
-        self.setup_variational_form()
-
+    def set_initial_geometry(self):
         # Initialisation de la solution avec des valeurs physiques
         with self.u_sol.x.petsc_vec.localForm() as loc:
             loc.set(0.0)
         
-        # Initialisation physique : cylindre droit
+        # On récup ici l'ensemble des positions des champs alpah et gamma au niveau des noeuds 
         alpha_dofs = self.V.sub(3).dofmap.list
         gamma_dofs = self.V.sub(2).dofmap.list
         
-        self.u_sol.x.array[alpha_dofs] = 1.0  # Cylindre circulaire
-        self.u_sol.x.array[gamma_dofs] = 0.0  # Pas de rotation
-        
-        # Utiliser la jacobienne automatique
+        # et ici on applique donc à tous les noeuds
+        self.u_sol.x.array[alpha_dofs] = 1.0 
+        self.u_sol.x.array[gamma_dofs] = 0.0
+
+
+    def solve(self, load_steps=[0.1, 0.3, 0.6, 1.0]):
+        self.apply_boundary_conditions()
+        self.setup_external_work()
+        self.setup_variational_form()
+
+        self.set_initial_geometry()
+                
         problem = NonlinearProblem(self.F, self.u_sol, self.bcs)
         
-        # Configuration du solveur Newton plus robuste
         solver = NewtonSolver(self.domain.comm, problem)
         solver.convergence_criterion = "incremental"
         solver.rtol = 1e-6
         solver.atol = 1e-8
         solver.max_it = 100
         
-        # Configuration correcte des options PETSc
         ksp = solver.krylov_solver
         ksp.setType("preonly")
         pc = ksp.pc
         pc.setType("lu")
         pc.setFactorSolverType("mumps")
-        
-        # Stratégie de continuation en charge
-        load_steps = [0.1, 0.3, 0.6, 1.0]
-        original_loads = {}
         
         # Sauvegarder les charges originales
         if self.p is not None:
@@ -231,6 +228,7 @@ class InflatedBeam:
             
         success = True
         
+        # Pour le moment on se s'occupe que de la continuation en charge pour la pression et le moment, de toute façon par sur d'utiliser f1 ou f3
         for i, factor in enumerate(load_steps):
             print(f"Étape de charge {i+1}/{len(load_steps)}: {factor*100:.0f}% de la charge")
             
@@ -240,11 +238,9 @@ class InflatedBeam:
             if self.c_gamma is not None:
                 self.c_gamma = lambda x: factor * original_c_gamma(x)
             
-            # Recalculer le travail externe avec la nouvelle charge
             self.setup_external_work()
             self.setup_variational_form()
             
-            # Nouveau problème avec la charge mise à jour
             problem = NonlinearProblem(self.F, self.u_sol, self.bcs)
             solver = NewtonSolver(self.domain.comm, problem)
             solver.convergence_criterion = "incremental"
@@ -273,7 +269,7 @@ class InflatedBeam:
                 success = False
                 break
         
-        # Restaurer les charges originales
+        # Restaurer les charges originales si pb il y a eu :)
         if self.p is not None:
             self.p = original_p
         if self.c_gamma is not None:
@@ -284,9 +280,21 @@ class InflatedBeam:
         
         return success
 
-    def extract_solution(self):
-        return self.u_sol.split()
-
+    
     def print_data(self):
-        print()
+        print("\nPropriété géométrique : ")
+        print(f"L = {self.L} cm")
+        print(f"R = {self.R} cm")
+        print(f"h = {self.h} cm")
+        print(f"Eléments de types Lagrange à {self.nb_elts} éléments")
+
+        print("\nGrandeurs comportement : ")
+        print(f"E = {self.E}")
+        print(f"v = {self.v}")
+
+        print("\nEfforts extérieurs : ")
+        print(f"f1 = {self.f1} N")
+        print(f"f3 = {self.f3} N")
+        print(f"c_gamma = {self.c_gamma} N.cm")
+        print(f"p = {self.p} N/cm^2")
 

@@ -42,7 +42,7 @@ class BeamVisualizer3D:
         return x_eval, u1_vals, u3_vals, gamma_vals, alpha_vals
     
     def compute_3d_geometry(self, x_vals, u1_vals, u3_vals, gamma_vals, alpha_vals, n_theta=32):
-        """Calcule la géométrie 3D de la poutre déformée selon votre formulation"""
+        """Calcule la géométrie 3D de la poutre déformée"""
         
         # Paramètre angulaire pour l'ellipse
         theta = np.linspace(0, 2*np.pi, n_theta, endpoint=False)
@@ -54,8 +54,6 @@ class BeamVisualizer3D:
         points = []
         
         for i, x1 in enumerate(x_vals):
-            # Position du centre de gravité G déformé
-            # OG = (x1 + u1(x1)) * e1^0 + u3(x1) * e3^0
             x_center = x1 + u1_vals[i]  # Coordonnée X du centre
             y_center = 0.0              # Pas de déplacement en Y pour le centre
             z_center = u3_vals[i]       # Déplacement transversal du centre
@@ -64,34 +62,27 @@ class BeamVisualizer3D:
             alpha = alpha_vals[i]
             gamma = gamma_vals[i]
             
-            # Demi-axes de l'ellipse : a = R*α, b = R*√(2-α²)
+            # Demi-axes de l'ellipse 
             a = self.beam.R * alpha
             b = self.beam.R * np.sqrt(max(0.01, 2 - alpha**2))  # Protection contre les valeurs négatives
             
-            # Base locale tournée par γ
-            # e2^γ = cos(γ) * e2^0 + sin(γ) * e3^0
-            # e3^γ = -sin(γ) * e2^0 + cos(γ) * e3^0
+            # Base locale tournée par gamma 
             cos_gamma = np.cos(gamma)
             sin_gamma = np.sin(gamma)
             
-            for j, th in enumerate(theta):
+            for th in theta:
                 # Coordonnées paramétriques de l'ellipse dans la base locale
-                # y(x1, θ) = a(x1) * cos(θ)
-                # z(x1, θ) = b(x1) * sin(θ)
                 y_local = a * np.cos(th)
                 z_local = b * np.sin(th)
                 
-                # Vecteur GM dans la base locale : y * e2^γ + z * e3^γ
                 # Projection dans la base globale
-                # e2^γ contribue à (0, cos(γ), sin(γ))
-                # e3^γ contribue à (0, -sin(γ), cos(γ))
-                dy = y_local * cos_gamma - z_local * sin_gamma
-                dz = y_local * sin_gamma + z_local * cos_gamma
+                proj_e3y_e1o = - z_local * sin_gamma
+                proj_e3y_e3o = z_local * cos_gamma
                 
                 # Position finale : OM = OG + GM
-                x_final = x_center
-                y_final = y_center + dy
-                z_final = z_center + dz
+                x_final = x_center + proj_e3y_e1o 
+                y_final = y_center + y_local
+                z_final = z_center + proj_e3y_e3o
                 
                 points.append([x_final, y_final, z_final])
         
@@ -183,8 +174,8 @@ class BeamVisualizer3D:
         else:
             # Visualisation superposée
             plotter = pv.Plotter(window_size=window_size)
-            plotter.add_mesh(mesh_init, color='blue', opacity=0.3, label='Initial')
-            plotter.add_mesh(mesh_def, color='red', opacity=0.8, label='Déformé')
+            plotter.add_mesh(mesh_init, color='lightblue', show_edges=True, opacity=0.3, label='Initial')
+            plotter.add_mesh(mesh_def, color='lightcoral', show_edges=True, opacity=0.8, label='Déformé')
             plotter.add_title('Comparaison des configurations')
             plotter.add_legend()
             plotter.show_axes()
@@ -193,7 +184,7 @@ class BeamVisualizer3D:
         
         return mesh_init, mesh_def
     
-    def plot_cross_sections_matplotlib(self, positions=[0.25, 0.5, 0.75]):
+    def plot_cross_sections_matplotlib(self, positions=[0.25, 0.5, 1]):
         """Trace les sections transversales avec matplotlib pour vérification"""
         
         x_vals, u1_vals, u3_vals, gamma_vals, alpha_vals = self.extract_solution_arrays(n_points=50)
@@ -223,14 +214,7 @@ class BeamVisualizer3D:
             y_local = a * np.cos(theta)
             z_local = b * np.sin(theta)
             
-            # Rotation par gamma
-            cos_gamma = np.cos(gamma)
-            sin_gamma = np.sin(gamma)
-            y_rotated = y_local * cos_gamma - z_local * sin_gamma
-            z_rotated = y_local * sin_gamma + z_local * cos_gamma
-            
-            # Tracer
-            axes[i].plot(y_rotated, z_rotated, 'r-', linewidth=2, label='Déformée')
+            axes[i].plot(y_local, z_local, 'r-', linewidth=2, label='Déformée')
             
             # Cercle initial pour comparaison
             y_circle = self.beam.R * np.cos(theta)
@@ -247,14 +231,37 @@ class BeamVisualizer3D:
         plt.tight_layout()
         plt.show()
         return fig
+
+    def plot_graph_evol_dofs(self):
+        data = self.extract_solution_arrays(n_points=50)
+        x_vals = data[0]
+        dofs_vals = data[1:]
+        
+        ylabels = ["u_1~(cm)", "u_3~(cm)", "\\gamma~(rad)", "\\alpha"]
+
+        fig, axes = plt.subplots(2, int(len(dofs_vals)/2), figsize=(4*(len(dofs_vals)/2), 4*(len(dofs_vals)/2)))
+        fig.suptitle(f"Variation of dofs compared to reference line")
+        
+        for i in range(2):
+            for j in range(2):
+                index = 2 * i + j
+                axes[i, j].plot(x_vals, dofs_vals[index], 'k-', linewidth=1)
+                axes[i, j].grid(True, alpha=0.3)
+                axes[i, j].set_title(f'Composante ${ylabels[index]}$ en fonction de $x_1$')
+                axes[i, j].set_xlabel('$x_1$ (cm)')
+                axes[i, j].set_ylabel(f'${ylabels[index]}$')
+
+        plt.tight_layout()
+        plt.show()
+            
     
     def debug_solution(self):
         """Fonction de debug pour vérifier les valeurs de la solution"""
         x_vals, u1_vals, u3_vals, gamma_vals, alpha_vals = self.extract_solution_arrays(n_points=50)
         
         print("=== DEBUG SOLUTION ===")
-        print(f"Longueur poutre: {self.beam.L}")
-        print(f"Rayon initial: {self.beam.R}")
+        self.beam.print_data()
+        print("")
         print(f"Nombre de points d'évaluation: {len(x_vals)}")
         print(f"Range x: [{x_vals[0]:.2f}, {x_vals[-1]:.2f}]")
         
