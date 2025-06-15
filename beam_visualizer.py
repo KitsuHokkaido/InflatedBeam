@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 class BeamVisualizer3D:
     def __init__(self, beam):
         self.beam = beam
-        
+       
     def extract_solution_arrays(self, n_points=100):
         x_eval = np.linspace(0, self.beam.L, n_points)
         
@@ -194,6 +194,8 @@ class BeamVisualizer3D:
             axes = [axes]
         
         theta = np.linspace(0, 2*np.pi, 100)
+
+        index = ['a', 'b', 'c']
         
         for i, pos_ratio in enumerate(positions):
             # Trouver l'indice correspondant à la position
@@ -220,12 +222,13 @@ class BeamVisualizer3D:
             y_circle = self.beam.R * np.cos(theta)
             z_circle = self.beam.R * np.sin(theta)
             axes[i].plot(y_circle, z_circle, 'b--', linewidth=1, alpha=0.7, label='Initiale')
-            
+        
             axes[i].set_aspect('equal')
             axes[i].grid(True, alpha=0.3)
-            axes[i].set_title(f'Section à x = {x_pos:.1f} cm\n(α = {alpha:.3f}, γ = {gamma:.3f} rad)')
-            axes[i].set_xlabel('Y (cm)')
-            axes[i].set_ylabel('Z (cm)')
+            axes[i].set_title(f'(α = {alpha:.3f}, γ = {gamma:.3f} rad)')
+            axes[i].set_xlabel('y (cm)')
+            axes[i].text(0.5, -0.25, f"({index[i]}) Section à x = {x_pos:.1f} cm", transform=axes[i].transAxes, ha='center', fontsize=12)
+            axes[i].set_ylabel('z (cm)')
             axes[i].legend()
         
         plt.tight_layout()
@@ -236,20 +239,25 @@ class BeamVisualizer3D:
         data = self.extract_solution_arrays(n_points=50)
         x_vals = data[0]
         dofs_vals = data[1:]
+
+        titles = ['Déplacement longitudinal', 'Déplacement transversal', 
+              'Rotation de section', 'Paramètre de forme']
         
-        ylabels = ["u_1~(cm)", "u_3~(cm)", "\\gamma~(rad)", "\\alpha"]
+        ylabels = [r'$u_1$ (cm)', r'$u_3$ (cm)', r'$\gamma$ (rad)', r'$\alpha$ (-)']
+        colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728']
 
         fig, axes = plt.subplots(2, int(len(dofs_vals)/2), figsize=(4*(len(dofs_vals)/2), 4*(len(dofs_vals)/2)))
-        fig.suptitle(f"Variation of dofs compared to reference line")
+        fig.suptitle('Évolution des variables le long de la poutre', fontsize=16, fontweight='bold') 
         
         for i in range(2):
             for j in range(2):
                 index = 2 * i + j
-                axes[i, j].plot(x_vals, dofs_vals[index], 'k-', linewidth=1)
+
+                axes[i, j].plot(x_vals, dofs_vals[index], color=colors[index], linewidth=1.5, alpha=0.9, label=ylabels[index])
                 axes[i, j].grid(True, alpha=0.3)
-                axes[i, j].set_title(f'Composante ${ylabels[index]}$ en fonction de $x_1$')
-                axes[i, j].set_xlabel('$x_1$ (cm)')
-                axes[i, j].set_ylabel(f'${ylabels[index]}$')
+                axes[i, j].set_title(titles[index], pad=15)
+                axes[i, j].set_xlabel(r'$x_1$ (cm)')
+                axes[i, j].set_ylabel(ylabels[index])
 
         plt.tight_layout()
         plt.show()
