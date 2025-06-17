@@ -6,44 +6,34 @@ class BeamVisualizer3D:
     def __init__(self, beam):
         self.beam = beam
        
-    def extract_solution_arrays(self, n_points=100):
-        x_eval = np.linspace(0, self.beam.L, n_points)
+    def extract_solution_arrays(self):
+        x_vals = self.beam.V.tabulate_dof_coordinates()[:, 0]     
+
+        u_vals = self.beam.u_sol.x.array
         
-        u1_vals = np.zeros_like(x_eval)
-        u3_vals = np.zeros_like(x_eval)
-        gamma_vals = np.zeros_like(x_eval)
-        alpha_vals = np.zeros_like(x_eval)
+        u1_dofs = np.unique(self.beam.V.sub(0).dofmap.list.flatten())
+        u3_dofs = np.unique(self.beam.V.sub(1).dofmap.list.flatten())
+        gamma_dofs =np.unique(self.beam.V.sub(2).dofmap.list.flatten())
+        alpha_dofs =np.unique(self.beam.V.sub(3).dofmap.list.flatten())
         
-        # Évaluer les solutions en chaque point
-        for i, x in enumerate(x_eval):
-            point = np.array([[x, 0.0, 0.0]])
-            try:
-                # Évaluer la solution complète au point x
-                u_val = self.beam.u_sol.eval(point, np.array([0]))
-                u1_vals[i] = u_val[0]
-                u3_vals[i] = u_val[1] 
-                gamma_vals[i] = u_val[2]
-                alpha_vals[i] = u_val[3]
-            except Exception as e:
-                print(f"Erreur d'évaluation au point {x}: {e}")
-                # Si l'évaluation échoue, utiliser les valeurs précédentes ou valeurs par défaut
-                if i > 0:
-                    u1_vals[i] = u1_vals[i-1]
-                    u3_vals[i] = u3_vals[i-1]
-                    gamma_vals[i] = gamma_vals[i-1]
-                    alpha_vals[i] = alpha_vals[i-1]
-                else:
-                    # Valeurs initiales
-                    u1_vals[i] = 0.0
-                    u3_vals[i] = 0.0
-                    gamma_vals[i] = 0.0
-                    alpha_vals[i] = 1.0
+        u1_vals = u_vals[u1_dofs]
+        u3_vals = u_vals[u3_dofs]
+        gamma_vals = u_vals[gamma_dofs]
+        alpha_vals = u_vals[alpha_dofs]
         
-        return x_eval, u1_vals, u3_vals, gamma_vals, alpha_vals
-    
+        sort_indices = np.argsort(x_vals)
+
+        x_vals = x_vals[sort_indices]
+
+        u1_vals = u1_vals[sort_indices]
+        u3_vals = u3_vals[sort_indices]
+        gamma_vals = gamma_vals[sort_indices]
+        alpha_vals = alpha_vals[sort_indices]
+
+        return x_vals, u1_vals, u3_vals, gamma_vals, alpha_vals
+
     def compute_3d_geometry(self, x_vals, u1_vals, u3_vals, gamma_vals, alpha_vals, n_theta=32):
         """Calcule la géométrie 3D de la poutre déformée"""
-        
         # Paramètre angulaire pour l'ellipse
         theta = np.linspace(0, 2*np.pi, n_theta, endpoint=False)
         
@@ -97,8 +87,8 @@ class BeamVisualizer3D:
         
         points = []
         
-        for i, x1 in enumerate(x_vals):
-            for j, th in enumerate(theta):
+        for x1 in x_vals:
+            for th in theta:
                 # Cylindre circulaire non déformé
                 x_final = x1
                 y_final = self.beam.R * np.cos(th)
@@ -138,7 +128,7 @@ class BeamVisualizer3D:
         """Visualise la poutre avec PyVista"""
         
         # Extraire les solutions
-        x_vals, u1_vals, u3_vals, gamma_vals, alpha_vals = self.extract_solution_arrays(n_points=50)
+        x_vals, u1_vals, u3_vals, gamma_vals, alpha_vals = self.extract_solution_arrays()
         
         # Afficher quelques valeurs pour diagnostic
         print(f"Valeurs de déformation détectées:")
@@ -184,10 +174,10 @@ class BeamVisualizer3D:
         
         return mesh_init, mesh_def
     
-    def plot_cross_sections_matplotlib(self, positions=[0.25, 0.5, 1]):
+    def plot_cross_sections_matplotlib(self, positions=[0.0, 0.5, 1]):
         """Trace les sections transversales avec matplotlib pour vérification"""
         
-        x_vals, u1_vals, u3_vals, gamma_vals, alpha_vals = self.extract_solution_arrays(n_points=50)
+        x_vals, u1_vals, u3_vals, gamma_vals, alpha_vals = self.extract_solution_arrays()
         
         fig, axes = plt.subplots(1, len(positions), figsize=(4*len(positions), 4))
         if len(positions) == 1:
@@ -236,7 +226,7 @@ class BeamVisualizer3D:
         return fig
 
     def plot_graph_evol_dofs(self):
-        data = self.extract_solution_arrays(n_points=50)
+        data = self.extract_solution_arrays()
         x_vals = data[0]
         dofs_vals = data[1:]
 
@@ -265,7 +255,7 @@ class BeamVisualizer3D:
     
     def debug_solution(self):
         """Fonction de debug pour vérifier les valeurs de la solution"""
-        x_vals, u1_vals, u3_vals, gamma_vals, alpha_vals = self.extract_solution_arrays(n_points=50)
+        x_vals, u1_vals, u3_vals, gamma_vals, alpha_vals = self.extract_solution_arrays()
         
         print("=== DEBUG SOLUTION ===")
         self.beam.print_data()

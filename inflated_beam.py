@@ -41,6 +41,8 @@ class InflatedBeam:
         self.pt_moment_ref = []
         self.pt_forces_ref = []
 
+        self.deltas = []
+
         self.domain = mesh.create_interval(MPI.COMM_WORLD, nb_elts, [0.0, L])
         self.tdim = self.domain.topology.dim
 
@@ -149,6 +151,7 @@ class InflatedBeam:
         for pos, f1, f3 in self.point_forces:
             delta = self.create_point_source(pos)
             point_force_work += f1 * self.u1_sol * delta + f3 * self.u3_sol * delta
+            self.deltas.append((pos, delta))
 
         external_work_density = pressure_work + force_work + moment_work + point_moment_work + point_force_work
         self.total_external_work = external_work_density * ufl.dx
@@ -199,20 +202,21 @@ class InflatedBeam:
         dofs_gamma = fem.locate_dofs_topological(self.V.sub(2), self.tdim-1, boundary_facets_left)
         dofs_alpha = fem.locate_dofs_topological(self.V.sub(3), self.tdim-1, boundary_facets_left)
         
-        bc_u1 = fem.dirichletbc(fem.Constant(self.domain, 0.0), dofs_u1, self.V.sub(0))
-        bc_u3 = fem.dirichletbc(fem.Constant(self.domain, 0.0), dofs_u3, self.V.sub(1))
-        bc_gamma = fem.dirichletbc(fem.Constant(self.domain, 0.0), dofs_gamma, self.V.sub(2))
-        bc_alpha = fem.dirichletbc(fem.Constant(self.domain, 1.0), dofs_alpha, self.V.sub(3))
+        bc_u1 = fem.dirichletbc(fem.Constant(self.domain, default_scalar_type(0.0)), dofs_u1, self.V.sub(0))
+        bc_u3 = fem.dirichletbc(fem.Constant(self.domain, default_scalar_type(0.0)), dofs_u3, self.V.sub(1))
+        bc_gamma = fem.dirichletbc(fem.Constant(self.domain, default_scalar_type(0.0)), dofs_gamma, self.V.sub(2))
+        bc_alpha = fem.dirichletbc(fem.Constant(self.domain, default_scalar_type(1.0)), dofs_alpha, self.V.sub(3))
 
-        #j'essaie de le bloquer à droite mais ça marche pas fou
+
         dofs_u3_right = fem.locate_dofs_topological(self.V.sub(1), self.tdim-1, boundary_facets_right)
-        bc_u3_right = fem.dirichletbc(fem.Constant(self.domain, 0.0), dofs_u3_right, self.V.sub(1))
-
         dofs_gamma_right = fem.locate_dofs_topological(self.V.sub(2), self.tdim-1, boundary_facets_right)
-        bc_gamma_right = fem.dirichletbc(fem.Constant(self.domain, 0.0), dofs_gamma_right, self.V.sub(2))
-
+        dofs_alpha_right = fem.locate_dofs_topological(self.V.sub(3), self.tdim-1, boundary_facets_right)
         
-        self.bcs = [bc_u1, bc_u3, bc_gamma, bc_alpha, bc_u3_right, bc_gamma_right]
+        bc_u3_right = fem.dirichletbc(fem.Constant(self.domain, default_scalar_type(0.0)), dofs_u3_right, self.V.sub(1))
+        bc_gamma_right = fem.dirichletbc(fem.Constant(self.domain, default_scalar_type(-np.pi/6)), dofs_gamma_right, self.V.sub(2))
+        bc_alpha_right = fem.dirichletbc(fem.Constant(self.domain, default_scalar_type(1.0)), dofs_alpha_right, self.V.sub(3))
+        
+        self.bcs = [bc_u1, bc_u3, bc_alpha, bc_u3_right, bc_alpha_right]
 
     def set_initial_geometry(self):
         # Initialisation de la solution avec des valeurs physiques
@@ -228,9 +232,9 @@ class InflatedBeam:
         self.u_sol.x.array[gamma_dofs] = 0.0
 
 
-    def solve(self, load_steps=[0.1, 0.3, 0.6, 1.0]):
-        self.apply_boundary_conditions()
+    def solve(self, load_steps=[0.1, 0.3, 0.6, 1.0]): 
         self.set_initial_geometry()
+        self.apply_boundary_conditions()
                     
         # Sauvegarder les charges originales
         original_p = self.p 
@@ -284,7 +288,7 @@ class InflatedBeam:
         if self.f3 is not None:
             self.f3 = lambda x: factor * original_f3(x)
        
-          # Appliquer le facteur de charge aux points sources
+        # Appliquer le facteur de charge aux points sources
         self.point_moment = [(pos, moment * factor) for pos, moment in self.pt_moment_ref]
     
         self.point_forces = [(pos, f1 * factor, f3 * factor) for pos, f1, f3 in self.pt_forces_ref]
@@ -328,7 +332,7 @@ class InflatedBeam:
         x = ufl.SpatialCoordinate(self.domain)[0]
 
         epsilon = self.L/(10 * self.nb_elts)
-        delta_approx = (1.0 / (epsilon * ufl.sqrt(2 * ufl.pi))) * ufl.exp(-0.5 * ((x - position) / epsilon)**2)
+        delta_approx = (1.0 / (epsilon * ufl.sqrt(ufl.pi))) * ufl.exp(-((x - position) / epsilon)**2)
         
         return delta_approx
     
@@ -349,3 +353,8 @@ class InflatedBeam:
         print(f"c_gamma = {self.c_gamma} N.cm")
         print(f"p = {self.p} N/cm^2")
 
+        print("\nPt source : ")
+        for pos, delta in self.deltas:
+            print(f"{pos} : {delta}")
+
+       

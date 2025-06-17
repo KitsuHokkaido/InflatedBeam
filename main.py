@@ -18,26 +18,27 @@ def beam_analysis():
     x = 75
     alpha_vals_at_x = []
     #moments = np.array([1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000, 11000, 12000, 13000, 14000, 15000])
-    moments = [6000]
+    moments = [10000]
     for moment in moments:
         beam = InflatedBeam(
             L=100.0,
             R=5,
-            h=0.01,  
-            nb_elts=300,
-            degree=3
+            h=0.05,  
+            nb_elts=100,
+            degree=2
         )
 
         beam.set_external_loads(
             p=150,
             f1=None,
-            f3=-2,
+            f3=None,
             c_gamma=None#lambda x: moment*x/100
         )
 
-        #beam.add_point_moment(position=100.0, moment=6000)
-        #beam.add_point_forces(pos=100, f1=-6000, f3=0)
-        #beam.add_point_forces(pos=50, f1=0, f3=-1000)
+        beam.add_point_moment(position=100.0, moment=550000)
+        beam.add_point_moment(position=0.0, moment=-550000)
+        #beam.add_point_forces(pos=100, f1=-10000, f3=0)
+        #beam.add_point_forces(pos=50, f1=0, f3=-100)
 
         sols = None
         
@@ -46,9 +47,9 @@ def beam_analysis():
             end = time.time()
 
             viz = BeamVisualizer3D(beam)
-            #viz.visualize_beam(show_both=False)
-            #viz.plot_cross_sections_matplotlib()
-            #viz.plot_graph_evol_dofs()
+            viz.visualize_beam(show_both=False)
+            viz.plot_cross_sections_matplotlib(positions=[0.2, 0.5, 0.8])
+            viz.plot_graph_evol_dofs()
             viz.debug_solution()
             print(f"Durée d'execution : {end - start}")
 
