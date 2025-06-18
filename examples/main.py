@@ -1,5 +1,5 @@
-from inflated_beam import InflatedBeam
-from beam_visualizer import BeamVisualizer3D
+from inflated_beam.model import InflatedBeam
+from inflated_beam.visualizer import BeamVisualizer3D
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -53,12 +53,12 @@ def beam_analysis():
             viz.debug_solution()
             print(f"Durée d'execution : {end - start}")
 
-            sols = viz.extract_solution_arrays()
+            sols = beam.extract_solution_arrays()
             alpha_vals_at_x.append(sols[4][x])
 
         else:
             print("Echec de la résolution")
-
+    
     #plot_alpha_chargement((moments/100), alpha_vals_at_x)
     
 if __name__ == "__main__":
