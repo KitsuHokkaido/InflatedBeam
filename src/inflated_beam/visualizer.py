@@ -9,7 +9,6 @@ class BeamVisualizer3D:
         self._x_vals, self._u1_vals, self._u3_vals, self._gamma_vals, self._alpha_vals = self._beam.extract_solution_arrays() 
 
     def _compute_3d_geometry(self, n_theta=32):
-        """Calcule la géométrie 3D de la poutre déformée"""
         # Paramètre angulaire pour l'ellipse
         theta = np.linspace(0, 2*np.pi, n_theta, endpoint=False)
         
@@ -55,9 +54,7 @@ class BeamVisualizer3D:
         points = np.array(points)
         return points.reshape(n_x, n_theta, 3)
     
-    def _compute_initial_geometry(self, n_theta=32):
-        """Calcule la géométrie 3D de la poutre non déformée (cylindre)"""
-        
+    def _compute_initial_geometry(self, n_theta=32):        
         theta = np.linspace(0, 2*np.pi, n_theta, endpoint=False)
         n_x = len(self._x_vals)
         
@@ -76,7 +73,6 @@ class BeamVisualizer3D:
         return points.reshape(n_x, n_theta, 3)
     
     def _create_mesh_from_points(self, points_3d):
-        """Crée un maillage PyVista à partir des points 3D"""
         n_x, n_theta, _ = points_3d.shape
         
         # Aplatir les points
@@ -101,7 +97,13 @@ class BeamVisualizer3D:
         return mesh
     
     def visualize_beam(self, show_both=True, window_size=(1200, 600)):
-        """Visualise la poutre avec PyVista"""
+        """
+        Visualisation de la poutre en 3D
+
+        Args:
+            show_both: permet d'afficher séparement ou non les déplacements de la poutre
+            window_size: taille de fenêtre d'affichage
+        """
         
         # Afficher quelques valeurs pour diagnostic
         print(f"Valeurs de déformation détectées:")
@@ -148,7 +150,11 @@ class BeamVisualizer3D:
         return mesh_init, mesh_def
     
     def plot_cross_sections_matplotlib(self, positions=[0.0, 0.5, 1]):
-        """Trace les sections transversales avec matplotlib pour vérification"""
+        """
+        Trace les sections transversales avec matplotlib pour vérification
+        Args:
+            positions: permet de spécifier l'emplacement des sections transerves à dessiner
+        """
             
         fig, axes = plt.subplots(1, len(positions), figsize=(4*len(positions), 4))
         if len(positions) == 1:
@@ -197,6 +203,7 @@ class BeamVisualizer3D:
         return fig
 
     def plot_graph_evol_dofs(self):
+        """Permet d'afficher l'évolutions des ddl selon x1"""
         dofs_vals = [self._u1_vals, self._u3_vals, self._gamma_vals, self._alpha_vals]
 
         titles = ['Déplacement longitudinal', 'Déplacement transversal', 

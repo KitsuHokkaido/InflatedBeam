@@ -30,6 +30,8 @@ def beam_analysis():
             material=material
         )
 
+        beam.set_boundary_conditions(conditions_type="mine")
+
         beam.set_external_loads(
             p=150,
             f1=None,

@@ -194,27 +194,6 @@ class InflatedBeam:
         self._total_external_work = external_work_density * ufl.dx
 
 
-    def _apply_boundary_conditions(self):
-        def boundary_left(x):
-            return np.isclose(x[0], 0.0)
-
-        def boundary_right(x):
-            return np.isclose(x[0], self._L)
-
-        boundary_facets_left = mesh.locate_entities_boundary(self._domain, self._tdim-1, boundary_left)
-        boundary_facets_right = mesh.locate_entities_boundary(self._domain, self._tdim-1, boundary_right)
-        
-        dofs_left = [fem.locate_dofs_topological(self._V.sub(i), self._tdim-1, boundary_facets_left) for i in range(4)]
-        bc_left_values = [0.0, 0.0, 0.0, 1.0]
-        bc_left = [fem.dirichletbc(fem.Constant(self._domain, default_scalar_type(bc_left_values[i])), dofs_left[i], self._V.sub(i)) for i in range(4)] 
-        
-        dofs_right = [fem.locate_dofs_topological(self._V.sub(i), self._tdim-1, boundary_facets_right) for i in range(4)]
-        bc_right_values = [0.0, 0.0, 0.0, 1.0]
-        bc_right = [fem.dirichletbc(fem.Constant(self._domain, default_scalar_type(bc_right_values[i])), dofs_right[i], self._V.sub(i)) for i in range(4)]
-        
-        
-        self._bcs = [bc_left[0], bc_left[1], bc_left[3], bc_right[1], bc_right[3]]
-
     def _set_initial_geometry(self):
         # Initialisation de la solution avec des valeurs physiques
         with self._u_sol.x.petsc_vec.localForm() as loc:
@@ -333,10 +312,40 @@ class InflatedBeam:
                 c_gamma_val = float(c_gamma)
                 self._c_gamma = lambda x: c_gamma_val
 
+    def set_boundary_conditions(self, conditions_type:str='mine') -> None:
+        """
+        Permet de spécifier les conditions limites
+        
+        Args:
+            conditions_type : le type de conditions disponibles [left_clamped]
+        """
+
+        def boundary_left(x):
+            return np.isclose(x[0], 0.0)
+
+        def boundary_right(x):
+            return np.isclose(x[0], self._L)
+
+        boundary_facets_left = mesh.locate_entities_boundary(self._domain, self._tdim-1, boundary_left)
+        boundary_facets_right = mesh.locate_entities_boundary(self._domain, self._tdim-1, boundary_right)
+        
+        dofs_left = [fem.locate_dofs_topological(self._V.sub(i), self._tdim-1, boundary_facets_left) for i in range(4)]
+        bc_left_values = [0.0, 0.0, 0.0, 1.0]
+        bc_left = [fem.dirichletbc(fem.Constant(self._domain, default_scalar_type(bc_left_values[i])), dofs_left[i], self._V.sub(i)) for i in range(4)] 
+        
+        dofs_right = [fem.locate_dofs_topological(self._V.sub(i), self._tdim-1, boundary_facets_right) for i in range(4)]
+        bc_right_values = [0.0, 0.0, 0.0, 1.0]
+        bc_right = [fem.dirichletbc(fem.Constant(self._domain, default_scalar_type(bc_right_values[i])), dofs_right[i], self._V.sub(i)) for i in range(4)]
+        
+        
+        if conditions_type == 'left_clamped':
+            self._bcs = bc_left
+        elif conditions_type == 'mine':
+            self._bcs = [bc_left[0], bc_left[1], bc_left[3], bc_right[1], bc_right[3]]
+
 
     def solve(self, load_steps=[0.1, 0.3, 0.6, 1.0]): 
         self._set_initial_geometry()
-        self._apply_boundary_conditions()
                     
         # Sauvegarder les charges originales
         original_p = self._p 
