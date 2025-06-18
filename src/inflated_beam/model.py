@@ -10,8 +10,40 @@ from dolfinx import fem, mesh, default_scalar_type
 
 from typing import Callable, Optional, Union
 
+class Material:
+    def __init__(self, E:float=2e5, v:float=0.3):
+        """
+        Initialise les propriétés matériau.
+        
+        Args:
+            E: Module d'Young (Pa)
+            v: Coefficient de Poisson
+        """
+
+        self._E = E
+        self._v = v
+
+    def compute_stiffness_parameters(self, h):
+        self._A = self._E*h
+        self._D1 = self._E*h**3/12*(1 - self._v**2)
+        self._D2 = self._D1
+        self._D3 = self._v*self._D1
+        self._D4 = self._E*h**3/24*(1 + self._v**2)
+
+        return self._A, self._D1, self._D2, self._D3, self._D4
+    
+    @property
+    def modulus(self):
+        return self._E
+    
+    @property
+    def poisson(self):
+        return self._v
+
+
+
 class InflatedBeam:
-    def __init__(self, L:float, R:float, h:float, nb_elts:int, degree:int, E=2e5, v=0.3) -> None:
+    def __init__(self, L:float, R:float, h:float, nb_elts:int, degree:int, material:Material) -> None:
         """
         Initialise le modèle de poutre.
         
@@ -30,17 +62,12 @@ class InflatedBeam:
         self._L = L
         self._R = R
         self._h = h
-
+    
         # Grandeurs comportements
-        self._E = E
-        self._v = v
-
-        self._A = E*h
-        self._D1 = E*h**3/12*(1 - v**2)
-        self._D2 = self._D1
-        self._D3 = v*self._D1
-        self._D4 = E*h**3/24*(1 + v**2)
-
+        self._E = material.modulus
+        self._v = material.poisson
+        self._A, self._D1, self._D2, self._D3, self._D4 = material.compute_stiffness_parameters(h)
+        
         # Efforts extérieurs
         self._p = None
         self._f1 = None

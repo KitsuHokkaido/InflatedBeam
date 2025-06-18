@@ -1,4 +1,4 @@
-from inflated_beam.model import InflatedBeam
+from inflated_beam.model import InflatedBeam, Material
 from inflated_beam.visualizer import BeamVisualizer3D
 
 import matplotlib.pyplot as plt
@@ -20,12 +20,14 @@ def beam_analysis():
     #moments = np.array([1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000, 11000, 12000, 13000, 14000, 15000])
     moments = [10000]
     for moment in moments:
+        material = Material(E=2e5, v=0.3)
         beam = InflatedBeam(
             L=100.0,
             R=5,
             h=0.05,  
             nb_elts=100,
-            degree=2
+            degree=2,
+            material=material
         )
 
         beam.set_external_loads(
