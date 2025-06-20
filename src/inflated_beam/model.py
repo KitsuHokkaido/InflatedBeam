@@ -312,12 +312,13 @@ class InflatedBeam:
                 c_gamma_val = float(c_gamma)
                 self._c_gamma = lambda x: c_gamma_val
 
-    def set_boundary_conditions(self, conditions_type:str='mine') -> None:
+    def set_boundary_conditions(self, conditions_type:str='left_clamped', **kwargs) -> None:
         """
         Permet de spécifier les conditions limites
         
         Args:
-            conditions_type : le type de conditions disponibles [left_clamped]
+            conditions_type : le type de conditions disponibles [left_clamped, buckling, center_section]
+            **kwargs : paramètres pour les déformations locales
         """
 
         def boundary_left(x):
@@ -337,12 +338,47 @@ class InflatedBeam:
         bc_right_values = [0.0, 0.0, 0.0, 1.0]
         bc_right = [fem.dirichletbc(fem.Constant(self._domain, default_scalar_type(bc_right_values[i])), dofs_right[i], self._V.sub(i)) for i in range(4)]
         
-        
         if conditions_type == 'left_clamped':
             self._bcs = bc_left
-        elif conditions_type == 'mine':
+        elif conditions_type == 'buckling':
             self._bcs = [bc_left[0], bc_left[1], bc_left[3], bc_right[1], bc_right[3]]
+        elif conditions_type == 'center_section':
+            self._bcs = bc_left
 
+            target_alpha = kwargs.get('target_alpha', 1.4)
+
+    def _create_center_boundary_conditions(self):
+        dof_coords = self._V.tabulate_dof_coordinates()[:, 0]
+        
+        center_pos = self._L / 2.0
+        tolerance = self._L / (2 * self._nb_elts) 
+        
+        center_bcs = []
+        bc_center_values = [0.0, 0.0, np.pi/6, 0.0]
+        
+        for i in [3]:  
+            sub_dofs = np.unique(self._V.sub(i).dofmap.list.flatten())
+            
+            center_dofs = []
+            for dof in sub_dofs:
+
+                index = dof//5
+
+                if abs(dof_coords[index] - center_pos) < tolerance:
+                    center_dofs.append(dof)
+            
+            if center_dofs:
+                print(f"DOFs trouvés au centre pour la composante {i}: {center_dofs}")
+                bc = fem.dirichletbc(
+                    fem.Constant(self._domain, default_scalar_type(bc_center_values[i])), 
+                    np.array(center_dofs, dtype=np.int32), 
+                    self._V.sub(i)
+                )
+                center_bcs.append(bc)
+            else:
+                print(f"Aucun DOF trouvé au centre pour la composante {i}")
+        
+        return center_bcs
 
     def solve(self, load_steps=[0.1, 0.3, 0.6, 1.0]): 
         self._set_initial_geometry()
