@@ -284,14 +284,12 @@ class InflatedBeam:
             width = self._L / 10.0
 
             position = kwargs.get('position', 50)
-            value = kwargs.get('value', 0.2)
+            amplitude = kwargs.get('imperfection_amplitude', 0.1)
 
-            amplitude = value - 1.0
-            
             dofs_coords = self._V.tabulate_dof_coordinates()[:, 0]
 
             for dof in alpha_dofs:
-                x_coord = dofs_coords[dof]
+                x_coord = dofs_coords[dof//5]
                 imperfection = amplitude * np.exp(-((x_coord - position) / width)**2)
                 self._u_sol.x.array[dof] = 1.0 + imperfection
 
