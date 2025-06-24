@@ -6,7 +6,7 @@ class BeamVisualizer3D:
     def __init__(self, beam):
         self._beam = beam
         self._beam_radius = self._beam.radius
-        self._x_vals, self._u1_vals, self._u3_vals, self._gamma_vals, self._alpha_vals = self._beam.extract_solution_arrays() 
+        self._x_vals, self._u1_vals, self._u3_vals, self._gamma_vals, self._alpha_vals, self._lam_vals = self._beam.extract_solution_arrays() 
 
     def _compute_3d_geometry(self, n_theta=32):
         # Paramètre angulaire pour l'ellipse
@@ -227,7 +227,16 @@ class BeamVisualizer3D:
 
         plt.tight_layout()
         plt.show()
-            
+    
+    def plot_lagrange_constraint(self):
+        fig, ax = plt.subplots(1, 1, figsize=(4, 4))
+        ax.plot(self._x_vals, self._lam_vals, color='#2ca02c', linewidth=1.5, alpha=0.9)
+        ax.grid(True, alpha=0.3)
+        ax.set_xlabel(r"$x_1 (cm)$")
+        ax.set_ylabel(r"$\lambda$")
+        ax.set_title(r"Contrainte $\lambda$ de perpendicularité des sections", pad=15)
+        plt.tight_layout()
+        plt.show()
     
     def debug_solution(self):
         """Fonction de debug pour vérifier les valeurs de la solution"""

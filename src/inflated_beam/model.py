@@ -185,7 +185,6 @@ class InflatedBeam:
         for pos, moment in self._point_moment:
             delta = self._create_point_source(pos)
             point_moment_work += moment * self._gamma_sol * delta
-
         for pos, f1, f3 in self._point_forces:
             delta = self._create_point_source(pos)
             point_force_work += f1 * self._u1_sol * delta + f3 * self._u3_sol * delta
@@ -193,19 +192,6 @@ class InflatedBeam:
         external_work_density = pressure_work + force_work + moment_work + point_moment_work + point_force_work
         self._total_external_work = external_work_density * ufl.dx
 
-
-    def _set_initial_geometry(self):
-        # Initialisation de la solution avec des valeurs physiques
-        with self._u_sol.x.petsc_vec.localForm() as loc:
-            loc.set(0.0)
-        
-        # On récup ici l'ensemble des positions des champs alpah et gamma au niveau des noeuds 
-        alpha_dofs = self._V.sub(3).dofmap.list
-        gamma_dofs = self._V.sub(2).dofmap.list
-        
-        # et ici on applique donc à tous les noeuds
-        self._u_sol.x.array[alpha_dofs] = 1.0 
-        self._u_sol.x.array[gamma_dofs] = 0.0
 
 
     def _apply_load_factor(self, factor, original_p, original_c_gamma, original_f1, original_f3):    
@@ -230,9 +216,9 @@ class InflatedBeam:
         problem = NonlinearProblem(self._F, self._u_sol, self._bcs)
         solver = NewtonSolver(self._domain.comm, problem)
         solver.convergence_criterion = "incremental"
-        solver.rtol = 1e-6
-        solver.atol = 1e-8
-        solver.max_it = 50
+        solver.rtol = 1e-8
+        solver.atol = 1e-10
+        solver.max_it = 100
         
         ksp = solver.krylov_solver
         ksp.setType("preonly")
@@ -268,7 +254,47 @@ class InflatedBeam:
 
     def add_point_forces(self, pos:float, f1:float, f3:float) -> None:
         """Ajoute des forces ponctuels à position"""
-        self._pt_forces_ref.append((pos, f1, f3)) 
+        self._pt_forces_ref.append((pos, f1, f3))
+
+
+    def set_initial_geometry(self, geometry_type, **kwargs):
+        """
+        Permet de spécifier le type de géométrie initiale
+
+        Args:
+            geometry_type : le type de géométrie => ['cylinder', 'imperfection']
+            kwargs : [position, ddl, value]
+        """       
+
+        # Initialisation de la solution avec des valeurs physiques
+        with self._u_sol.x.petsc_vec.localForm() as loc:
+            loc.set(0.0)
+        
+
+        # On récup ici l'ensemble des positions des champs alpah et gamma au niveau des noeuds 
+        alpha_dofs = np.unique(self._V.sub(3).dofmap.list.flatten())
+        gamma_dofs = np.unique(self._V.sub(2).dofmap.list.flatten())
+        
+        if geometry_type == "cylinder":
+            # et ici on applique donc à tous les noeuds
+            self._u_sol.x.array[alpha_dofs] = 1.0 
+            self._u_sol.x.array[gamma_dofs] = 0.0
+
+        elif geometry_type == "imperfection": 
+            width = self._L / 10.0
+
+            position = kwargs.get('position', 50)
+            value = kwargs.get('value', 0.2)
+
+            amplitude = value - 1.0
+            
+            dofs_coords = self._V.tabulate_dof_coordinates()[:, 0]
+
+            for dof in alpha_dofs:
+                x_coord = dofs_coords[dof]
+                imperfection = amplitude * np.exp(-((x_coord - position) / width)**2)
+                self._u_sol.x.array[dof] = 1.0 + imperfection
+
 
     def set_external_loads(self, p: Optional[Union[float, Callable]] = None,
                           f1: Optional[Union[float, Callable]] = None,
@@ -312,13 +338,12 @@ class InflatedBeam:
                 c_gamma_val = float(c_gamma)
                 self._c_gamma = lambda x: c_gamma_val
 
-    def set_boundary_conditions(self, conditions_type:str='left_clamped', **kwargs) -> None:
+    def set_boundary_conditions(self, conditions_type:str='left_clamped') -> None:
         """
         Permet de spécifier les conditions limites
         
         Args:
             conditions_type : le type de conditions disponibles [left_clamped, buckling, center_section]
-            **kwargs : paramètres pour les déformations locales
         """
 
         def boundary_left(x):
@@ -342,47 +367,9 @@ class InflatedBeam:
             self._bcs = bc_left
         elif conditions_type == 'buckling':
             self._bcs = [bc_left[0], bc_left[1], bc_left[3], bc_right[1], bc_right[3]]
-        elif conditions_type == 'center_section':
-            self._bcs = bc_left
 
-            target_alpha = kwargs.get('target_alpha', 1.4)
-
-    def _create_center_boundary_conditions(self):
-        dof_coords = self._V.tabulate_dof_coordinates()[:, 0]
-        
-        center_pos = self._L / 2.0
-        tolerance = self._L / (2 * self._nb_elts) 
-        
-        center_bcs = []
-        bc_center_values = [0.0, 0.0, np.pi/6, 0.0]
-        
-        for i in [3]:  
-            sub_dofs = np.unique(self._V.sub(i).dofmap.list.flatten())
-            
-            center_dofs = []
-            for dof in sub_dofs:
-
-                index = dof//5
-
-                if abs(dof_coords[index] - center_pos) < tolerance:
-                    center_dofs.append(dof)
-            
-            if center_dofs:
-                print(f"DOFs trouvés au centre pour la composante {i}: {center_dofs}")
-                bc = fem.dirichletbc(
-                    fem.Constant(self._domain, default_scalar_type(bc_center_values[i])), 
-                    np.array(center_dofs, dtype=np.int32), 
-                    self._V.sub(i)
-                )
-                center_bcs.append(bc)
-            else:
-                print(f"Aucun DOF trouvé au centre pour la composante {i}")
-        
-        return center_bcs
 
     def solve(self, load_steps=[0.1, 0.3, 0.6, 1.0]): 
-        self._set_initial_geometry()
-                    
         # Sauvegarder les charges originales
         original_p = self._p 
         original_c_gamma = self._c_gamma
@@ -444,15 +431,15 @@ class InflatedBeam:
     def extract_solution_arrays(self):
         x_vals = self._V.tabulate_dof_coordinates()[:, 0]     
 
-        dofs = [np.unique(self._V.sub(i).dofmap.list.flatten()) for i in range(4)]
-        dofs_vals = [self._u_sol.x.array[dofs[i]] for i in range(4)] 
+        dofs = [np.unique(self._V.sub(i).dofmap.list.flatten()) for i in range(5)]
+        dofs_vals = [self._u_sol.x.array[dofs[i]] for i in range(5)] 
         
         sort_indices = np.argsort(x_vals)
 
         x_vals = x_vals[sort_indices]
         dofs_vals = [vals[sort_indices] for vals in dofs_vals]
 
-        return x_vals, dofs_vals[0], dofs_vals[1], dofs_vals[2], dofs_vals[3]
+        return x_vals, dofs_vals[0], dofs_vals[1], dofs_vals[2], dofs_vals[3], dofs_vals[4]
 
     @property
     def radius(self):

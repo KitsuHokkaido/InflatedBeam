@@ -12,16 +12,17 @@ def run_beam_analysis():
         material=material
     )
 
-    beam.set_boundary_conditions(conditions_type='center_deformation')
+    beam.set_initial_geometry(geometry_type='imperfection', position=50, ddl=3, value=0.4)
+    beam.set_boundary_conditions(conditions_type='buckling')
 
     beam.set_external_loads(
-        p=150,
+        p=1,
         f1=None,
         f3=None,
         c_gamma=None
     )
 
-    beam.add_point_moment(50, 200000)
+    beam.add_point_forces(100, -1000, 0)
 
     if beam.solve():
         viz = BeamVisualizer3D(beam)
