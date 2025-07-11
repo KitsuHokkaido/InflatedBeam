@@ -24,7 +24,7 @@ def beam_analysis():
         beam = InflatedBeam(
             L=100.0,
             R=5.0,
-            h=0.01,  
+            h=0.05,  
             nb_elts=100,
             degree=2,
             material=material
@@ -34,14 +34,14 @@ def beam_analysis():
         beam.set_boundary_conditions(conditions_type="buckling")
 
         beam.set_external_loads(
-            p=0.01,
+            p=12,
             f1=None,
             f3=None,
             c_gamma=None#lambda x: moment*x/100
         )
 
-        beam.add_point_moment(position=100.0, moment=10000)
-        beam.add_point_moment(position=0.0, moment=-10000)
+        beam.add_point_moment(position=100.0, moment=1000)
+        beam.add_point_moment(position=0.0, moment=-1000)
         #beam.add_point_forces(pos=100, f1=-100, f3=0)
         #beam.add_point_forces(pos=50, f1=0, f3=-100)
 

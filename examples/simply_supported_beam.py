@@ -15,16 +15,16 @@ def beam_analysis():
     )
 
     beam.set_initial_geometry(geometry_type='cylinder')
-    beam.set_boundary_conditions(conditions_type='left_clamped')
+    beam.set_boundary_conditions(conditions_type='simply_supported')
     
     beam.set_external_loads(
-        p=10,
+        p=12,
         f1=None,
         f3=None,
         c_gamma=None
     )
     
-    beam.add_point_forces(pos=60, f1=0, f3=-100)
+    beam.add_point_forces(pos=30, f1=0, f3=-100)
     #beam.add_point_forces(pos=60.0, f1=-20, f3=0)
 
     start = time.time()
@@ -34,7 +34,7 @@ def beam_analysis():
         
         viz = BeamVisualizer3D(beam)
         viz.visualize_beam(show_both=False)
-        viz.plot_cross_sections_matplotlib(positions=[0, 0.25, 1])
+        viz.plot_cross_sections_matplotlib(positions=[0, 0.5, 1])
         viz.plot_graph_evol_dofs()
         viz.plot_lagrange_constraint()
         viz.debug_solution()
@@ -44,3 +44,4 @@ def beam_analysis():
 
 if __name__ == '__main__':
     beam_analysis()
+
