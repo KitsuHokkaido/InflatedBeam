@@ -105,13 +105,6 @@ class BeamVisualizer3D:
             window_size: taille de fenêtre d'affichage
         """
         
-        # Afficher quelques valeurs pour diagnostic
-        print(f"Valeurs de déformation détectées:")
-        print(f"  u1 max: {np.max(np.abs(self._u1_vals)):.6f}")
-        print(f"  u3 max: {np.max(np.abs(self._u3_vals)):.6f}")
-        print(f"  gamma max: {np.max(np.abs(self._gamma_vals)):.6f}")
-        print(f"  alpha min/max: {np.min(self._alpha_vals):.6f} / {np.max(self._alpha_vals):.6f}")
-        
         # Calculer les géométries
         points_init = self._compute_initial_geometry()
         points_def = self._compute_3d_geometry()
@@ -172,8 +165,6 @@ class BeamVisualizer3D:
             # Paramètres de l'ellipse à cette position
             alpha = self._alpha_vals[idx]
             gamma = self._gamma_vals[idx]
-            
-            print(f"Position {pos_ratio}: alpha={alpha:.4f}, gamma={gamma:.4f}")
             
             # Demi-axes
             a = self._beam_radius * alpha
@@ -241,7 +232,7 @@ class BeamVisualizer3D:
     def debug_solution(self):
         """Fonction de debug pour vérifier les valeurs de la solution"""
         
-        print("=== DEBUG SOLUTION ===")
+        print("\n=== DEBUG SOLUTION ===")
         self._beam.print_data()
         print("")
         print(f"Nombre de points d'évaluation: {len(self._x_vals)}")

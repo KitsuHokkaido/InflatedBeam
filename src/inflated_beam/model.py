@@ -175,7 +175,13 @@ class InflatedBeam:
             c_gamma = self._c_gamma(x)
 
         
-        pressure_work = p*ufl.pi*self._R**2*(self._alpha_sol*ufl.cos(self._gamma_sol) + ufl.sqrt(2 - self._alpha_sol**2)*(1 - 2*self._alpha_sol))
+        pressure_work_lateral = p*ufl.pi*self._R**2*(self._alpha_sol*ufl.cos(self._gamma_sol) + ufl.sqrt(2 - self._alpha_sol**2)*(1 - 2*self._alpha_sol))
+        
+        x1_0 = self._create_point_source(0)
+        x1_L = self._create_point_source(self._L) 
+
+        pressure_work_border = (p * ufl.pi * self._R**2 * self._alpha_sol * ufl.sqrt(2 - self._alpha_sol**2)) * (x1_0 - x1_L)
+
         force_work = f1*self._u1_sol + f3*self._u3_sol
         moment_work = c_gamma*self._gamma_sol
 
@@ -189,15 +195,13 @@ class InflatedBeam:
             delta = self._create_point_source(pos)
             point_force_work += f1 * self._u1_sol * delta + f3 * self._u3_sol * delta
 
-        external_work_density = pressure_work + force_work + moment_work + point_moment_work + point_force_work
+        external_work_density = pressure_work_lateral + pressure_work_border + force_work + moment_work + point_moment_work + point_force_work
         self._total_external_work = external_work_density * ufl.dx
 
 
 
-    def _apply_load_factor(self, factor, original_p, original_c_gamma, original_f1, original_f3):    
+    def _apply_load_factor(self, factor, original_c_gamma, original_f1, original_f3):    
         # Appliquer le facteur de charge
-        if self._p is not None:
-            self._p = lambda x: factor * original_p(x)
         if self._c_gamma is not None:
             self._c_gamma = lambda x: factor * original_c_gamma(x)
 
@@ -216,7 +220,7 @@ class InflatedBeam:
         problem = NonlinearProblem(self._F, self._u_sol, self._bcs)
         solver = NewtonSolver(self._domain.comm, problem)
         solver.convergence_criterion = "incremental"
-        solver.rtol = 1e-8
+        solver.rtol = 1e-9
         solver.atol = 1e-10
         solver.max_it = 100
         
@@ -365,11 +369,11 @@ class InflatedBeam:
             self._bcs = bc_left
         elif conditions_type == 'buckling':
             self._bcs = [bc_left[0], bc_left[1], bc_left[3], bc_right[1], bc_right[3]]
-
+        elif conditions_type == 'simply_supported':
+            self._bcs = [bc_left[0], bc_left[1], bc_right[1]]
 
     def solve(self, load_steps=[0.1, 0.3, 0.6, 1.0]): 
         # Sauvegarder les charges originales
-        original_p = self._p 
         original_c_gamma = self._c_gamma
 
         original_f1 = self._f1
@@ -381,7 +385,7 @@ class InflatedBeam:
         for i, factor in enumerate(load_steps):
             print(f"Étape de charge {i+1}/{len(load_steps)}: {factor*100:.0f}% de la charge")
             
-            self._apply_load_factor(factor, original_p, original_c_gamma, original_f1, original_f3)
+            self._apply_load_factor(factor, original_c_gamma, original_f1, original_f3)
 
             self._setup_external_work()
             self._setup_variational_form()
@@ -393,8 +397,6 @@ class InflatedBeam:
             
         
         # Restaurer les charges originales si pb il y a eu :)
-        if self._p is not None:
-            self._p = original_p
         if self._c_gamma is not None:
             self._c_gamma = original_c_gamma
         
