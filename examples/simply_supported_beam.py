@@ -24,7 +24,9 @@ def beam_analysis():
         c_gamma=None
     )
     
-    beam.add_point_forces(pos=30, f1=0, f3=-100)
+    beam.add_point_forces(pos=30, f1=0, f3=100)
+    #beam.add_point_forces(pos=0, f1=0, f3=-50)
+    #beam.add_point_forces(pos=60, f1=0, f3=-50)
     #beam.add_point_forces(pos=60.0, f1=-20, f3=0)
 
     start = time.time()
@@ -34,7 +36,7 @@ def beam_analysis():
         
         viz = BeamVisualizer3D(beam)
         viz.visualize_beam(show_both=False)
-        viz.plot_cross_sections_matplotlib(positions=[0, 0.5, 1])
+        #viz.plot_cross_sections_matplotlib(positions=[0, 0.5, 1])
         viz.plot_graph_evol_dofs()
         viz.plot_lagrange_constraint()
         viz.debug_solution()

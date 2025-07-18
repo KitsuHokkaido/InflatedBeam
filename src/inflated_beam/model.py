@@ -101,7 +101,7 @@ class InflatedBeam:
         alpha_1 = self._alpha_sol.dx(0)
         alpha_11 = alpha_1.dx(0)
 
-        e_p = u1_1 + 0.5 * (u1_1**2 + u3_1**2) 
+        e_p = u1_1 #+ 0.5 * (u1_1**2 + u3_1**2) 
         k_p = self._gamma_sol.dx(0)
         k_22s = self._R*(self._alpha_sol*ufl.sqrt(2 - self._alpha_sol**2) - 1)
 
@@ -129,9 +129,9 @@ class InflatedBeam:
             2*self._D3 * k_22s * overline_k11s
         )
         
-        U_ps = self._R * self._A * ufl.pi * e_p * self._R**2 * (alpha_1**2) / (2 - self._alpha_sol**2)
+        U_ps = (self._R * self._A * ufl.pi * e_p * self._R**2 * (alpha_1**2))/ (2 - self._alpha_sol**2)
         
-        energy_density = U_p + U_s + U_ps
+        energy_density = U_p #+ U_s + U_ps
         self._total_internal_energy = energy_density * ufl.dx
         
         self._setup_lagrange_multiplier()
@@ -145,8 +145,8 @@ class InflatedBeam:
         u3_1 = self._u3_sol.dx(0)
         j_p = ufl.sqrt((1 + u1_1)**2 + u3_1**2)
 
-        C = - ufl.sin(self._gamma_sol)*(1 + u1_1)/j_p - ufl.cos(self._gamma_sol)*u3_1/j_p
-    
+        C =  (ufl.cos(self._gamma_sol)*u3_1)/j_p - (ufl.sin(self._gamma_sol)*(1 + u1_1))/j_p
+
         constraint_term_density = self._lam_sol * C
         self._lagrange_term = constraint_term_density * ufl.dx
 
@@ -370,7 +370,10 @@ class InflatedBeam:
         elif conditions_type == 'buckling':
             self._bcs = [bc_left[0], bc_left[1], bc_left[3], bc_right[1], bc_right[3]]
         elif conditions_type == 'simply_supported':
-            self._bcs = [bc_left[0], bc_left[1], bc_right[1]]
+            #petite partie à ajouter si on veut le cas linéaire sans déformation de section
+            dofs_alpha = np.unique(self._V.sub(3).dofmap.list.flatten())
+            bc_dofs_alpha = fem.dirichletbc(fem.Constant(self._domain, default_scalar_type(1.0)), dofs_alpha, self._V.sub(3)) 
+            self._bcs = [bc_left[0], bc_left[1], bc_right[1], bc_dofs_alpha]
 
     def solve(self, load_steps=[0.1, 0.3, 0.6, 1.0]): 
         # Sauvegarder les charges originales
