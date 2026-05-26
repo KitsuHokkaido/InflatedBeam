@@ -1,0 +1,43 @@
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "inflated_beam"
+version = "0.1"
+description = "Finite element model for inflatable beam deformation"
+authors = [
+    {name = "ALLOUCHE", email = "david_allouche@outlook.com"}
+]
+requires-python = ">=3.10"
+dependencies = [
+    "numpy>=1.24",
+    "matplotlib>=3.7",
+]
+
+[project.optional-dependencies]
+# Ces dépendances FEniCSx/PETSc ne s'installent pas via pip classique :
+# il faut passer par conda-forge. Elles sont listées ici pour documentation.
+# conda install -c conda-forge "fenics-dolfinx>=0.9,<0.11" mpich petsc4py mpi4py pyvista
+fenics = [
+    "fenics-dolfinx>=0.9,<0.11",
+    "petsc4py",
+    "mpi4py",
+    "pyvista",
+]
+
+dev = [
+    "black>=22.0",
+    "pytest>=7.0",
+]
+
+[tool.black]
+line-length = 88
+target-version = ['py36']
+skip-string-normalization = true
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
