@@ -6,7 +6,8 @@ Ce projet a pour objectif de déterminer les déformations d'une poutre gonflabl
 
 ### Environnement conda 
 
-Il suffit d'éxecuter la commande suivante : 
+Il suffit d'exécuter la commande suivante : 
+
 ``` bash
 conda env create -f environment.yml
 ``` 
