@@ -1,0 +1,17 @@
+name: inflatedbeam-env
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.13
+  - fenics-dolfinx=0.9.0
+  - fenics-basix=0.9.0
+  - fenics-ffcx=0.9.0
+  - fenics-ufl=2024.2.0
+  - mpich
+  - petsc4py
+  - mpi4py
+  - pyvista
+  - pip
+  - pip:
+      - -e ".[dev]"

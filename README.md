@@ -4,7 +4,15 @@ Ce projet a pour objectif de déterminer les déformations d'une poutre gonflabl
 
 ## Installation
 
-### Le projet
+### Environnement conda 
+
+Il suffit d'éxecuter la commande suivante : 
+``` bash
+conda env create -f environment.yml
+``` 
+
+### Autres
+#### Le projet
 
 Il faut tout d'abord cloner le dépôt 
 
@@ -26,12 +34,12 @@ conda install pip
 pip install -e .
 ```
 
-### Dépendances
+#### Dépendances
 
 Des dépendances sont nécessaires pour faire fonctionner la bib qui s'appuie sur Fenics
 
 ```bash
-conda install -c conda-forge fenics-dolfinx mpich pyvista
+conda install -c conda-forge "fenics-dolfinx>=0.9,<0.11" mpich petsc4py mpi4py pyvista
 ```
 
 ## Exemple d'utilisation
