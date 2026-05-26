@@ -193,6 +193,7 @@ class InflatedBeam:
             point_moment_work += moment * self._gamma_sol * delta
         for pos, f1, f3 in self._point_forces:
             delta = self._create_point_source(pos)
+            #print(f"f3*delta = {f3*delta}")
             point_force_work += f1 * self._u1_sol * delta + f3 * self._u3_sol * delta
 
         external_work_density = pressure_work_lateral + pressure_work_border + force_work + moment_work + point_moment_work + point_force_work
@@ -248,7 +249,7 @@ class InflatedBeam:
         x = ufl.SpatialCoordinate(self._domain)[0]
 
         epsilon = self._L/(10 * self._nb_elts)
-        delta_approx = (1.0 / (epsilon * ufl.sqrt(ufl.pi))) * ufl.exp(-((x - position) / epsilon)**2)
+        delta_approx = ufl.exp(-((x - position) / epsilon)**2)
         
         return delta_approx
 
@@ -375,7 +376,7 @@ class InflatedBeam:
             bc_dofs_alpha = fem.dirichletbc(fem.Constant(self._domain, default_scalar_type(1.0)), dofs_alpha, self._V.sub(3)) 
             self._bcs = [bc_left[0], bc_left[1], bc_right[1], bc_dofs_alpha]
 
-    def solve(self, load_steps=[0.1, 0.3, 0.6, 1.0]): 
+    def solve(self, load_steps):#=[0.1, 0.3, 0.6, 1.0]): 
         # Sauvegarder les charges originales
         original_c_gamma = self._c_gamma
 
